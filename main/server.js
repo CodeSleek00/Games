@@ -5,101 +5,119 @@ const io = require("socket.io")(http);
 
 app.use(express.static("public"));
 
-let rooms = {}; // roomKey => { players, boxes, turnOrder, currentTurn }
+let rooms = {}; // roomKey => room data
 
-// Helper: initialize boxes
 function initBoxes() {
-    const contents = ["bomb", "red","red","red","green","green","green","green","green"];
-    return contents.sort(() => Math.random() - 0.5).map(c => ({ content: c, opened: false }));
+    // Create 9 empty boxes
+    return Array.from({length:9},()=>({content:null, opened:false}));
 }
 
-function nextTurn(room) {
-    if(room.turnOrder.length === 0) return null;
-    room.currentTurn = (room.currentTurn + 1) % room.turnOrder.length;
-    return room.turnOrder[room.currentTurn];
-}
-
-io.on("connection", (socket) => {
-    console.log("New connection:", socket.id);
-
-    let joinedRoom = null;
-
-    // Join room
-    socket.on("joinRoom", (roomKey, playerName, callback) => {
-        if(!rooms[roomKey]){
-            callback({ success:false, message:"Invalid Room Key" });
-            return;
-        }
-
-        joinedRoom = roomKey;
-        const room = rooms[roomKey];
-
-        room.players[socket.id] = { id: socket.id, name: playerName, score:0 };
-        room.turnOrder = Object.keys(room.players);
-
-        socket.join(roomKey);
-
-        io.to(roomKey).emit("players", room.players);
-        io.to(roomKey).emit("boxes", room.boxes);
-        io.to(roomKey).emit("turn", room.turnOrder[room.currentTurn]);
-
-        callback({ success:true });
-    });
-
-    // Player guesses
-    socket.on("guessBox", (index) => {
-        if(!joinedRoom) return;
-        const room = rooms[joinedRoom];
-        if(socket.id !== room.turnOrder[room.currentTurn]) return;
-        if(room.boxes[index].opened) return;
-
-        room.boxes[index].opened = true;
-        const content = room.boxes[index].content;
-
-        if(room.players[socket.id]){
-            if(content==="green") room.players[socket.id].score +=10;
-            else if(content==="red") room.players[socket.id].score -=5;
-            else if(content==="bomb") room.players[socket.id].score = 0;
-        }
-
-        io.to(joinedRoom).emit("boxes", room.boxes);
-        io.to(joinedRoom).emit("players", room.players);
-
-        // Reset if bomb or all opened
-        const allOpened = room.boxes.every(b=>b.opened);
-        if(content==="bomb" || allOpened){
-            room.boxes = initBoxes();
-            room.boxes.forEach(b=>b.opened=false);
-            io.to(joinedRoom).emit("boxes", room.boxes);
-        }
-
-        nextTurn(room);
-        io.to(joinedRoom).emit("turn", room.turnOrder[room.currentTurn]);
-    });
-
-    // Disconnect
-    socket.on("disconnect", ()=>{
-        if(!joinedRoom) return;
-        const room = rooms[joinedRoom];
-        delete room.players[socket.id];
-        room.turnOrder = Object.keys(room.players);
-        if(room.currentTurn>=room.turnOrder.length) room.currentTurn=0;
-        io.to(joinedRoom).emit("players", room.players);
-        io.to(joinedRoom).emit("turn", room.turnOrder[room.currentTurn]);
-    });
-});
-
-// Create rooms manually
 function createRoom(roomKey){
     if(!rooms[roomKey]){
-        rooms[roomKey] = { players:{}, boxes:initBoxes(), turnOrder:[], currentTurn:0 };
+        rooms[roomKey] = {
+            players:{}, // socket.id => {name, score, roundsPlayed}
+            turnOrder:[],
+            currentTurn:0,
+            boxes:initBoxes(),
+            round:1,
+            maxRounds:3,
+            setter:null, // player who sets boxes
+            guesser:null // player who guesses
+        };
         console.log("Room created:", roomKey);
     }
 }
 
-// Example: Pre-create rooms
+// Pre-create a sample room
 createRoom("ROOM123");
-createRoom("ROOMABC");
 
-const PORT = process.env.PORT || 3000;
-http.listen(PORT, ()=>console.log(`Server running on port ${PORT}`));
+function nextTurn(room){
+    // Switch setter/guesser if round complete
+    if(room.round > room.maxRounds) return;
+    const temp = room.setter;
+    room.setter = room.guesser;
+    room.guesser = temp;
+    room.boxes = initBoxes();
+    room.round++;
+}
+
+io.on("connection",(socket)=>{
+    console.log("Connected:", socket.id);
+    let joinedRoom = null;
+
+    // Join room
+    socket.on("joinRoom",(roomKey, playerName,callback)=>{
+        if(!rooms[roomKey]){
+            callback({success:false,message:"Invalid Room Key"});
+            return;
+        }
+        joinedRoom = roomKey;
+        const room = rooms[roomKey];
+
+        if(Object.keys(room.players).length>=2){
+            callback({success:false,message:"Room Full"});
+            return;
+        }
+
+        room.players[socket.id] = {id:socket.id,name:playerName,score:0,roundsPlayed:0};
+        const ids = Object.keys(room.players);
+        if(ids.length===2){
+            // assign setter and guesser
+            room.setter = ids[0];
+            room.guesser = ids[1];
+        }
+
+        socket.join(roomKey);
+        io.to(roomKey).emit("roomData",room);
+        callback({success:true});
+    });
+
+    // Setter sets box
+    socket.on("setBox",(data)=>{
+        const room = rooms[joinedRoom];
+        if(socket.id!==room.setter) return;
+        if(room.boxes[data.index]) room.boxes[data.index].content = data.content;
+        io.to(joinedRoom).emit("roomData",room);
+    });
+
+    // Guesser guesses
+    socket.on("guessBox",(index)=>{
+        const room = rooms[joinedRoom];
+        if(socket.id!==room.guesser) return;
+        const box = room.boxes[index];
+        if(box.opened) return;
+        box.opened = true;
+
+        const player = room.players[socket.id];
+        if(box.content==="green") player.score+=10;
+        else if(box.content==="red") player.score-=5;
+        else if(box.content==="bomb") player.score=0;
+
+        io.to(joinedRoom).emit("roomData",room);
+
+        const allOpened = room.boxes.every(b=>b.opened);
+        if(box.content==="bomb" || allOpened){
+            player.roundsPlayed++;
+            if(player.roundsPlayed>=room.maxRounds){
+                // Round over for this player, switch roles
+                nextTurn(room);
+            } else {
+                // reset boxes for next round for same roles
+                room.boxes = initBoxes();
+            }
+            io.to(joinedRoom).emit("roomData",room);
+        }
+    });
+
+    socket.on("disconnect",()=>{
+        if(!joinedRoom) return;
+        const room = rooms[joinedRoom];
+        delete room.players[socket.id];
+        room.setter = null;
+        room.guesser = null;
+        io.to(joinedRoom).emit("roomData",room);
+    });
+});
+
+const PORT = process.env.PORT||3000;
+http.listen(PORT,()=>console.log("Server running on port",PORT));
