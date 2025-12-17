@@ -1,13 +1,11 @@
 {
   "name": "draw-guess-game",
   "version": "1.0.0",
-  "description": "Real-time multiplayer Draw & Guess game using Node.js and Socket.io",
+  "description": "Real-time Draw & Guess game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
-  "author": "CodeSleek Studios",
-  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.7.2"

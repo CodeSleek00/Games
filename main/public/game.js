@@ -1,4 +1,4 @@
-const socket = io(); // Socket.io connection
+const socket = io();
 
 // Elements
 const joinBtn = document.getElementById("joinBtn");
@@ -17,76 +17,60 @@ const playersList = document.getElementById("playersList");
 let drawing = false;
 let role = "";
 let roomCode = "";
-let myId = "";
 
 // Join Room
 joinBtn.addEventListener("click", () => {
   const name = nameInput.value.trim();
   const room = roomInput.value.trim();
 
-  if (!name || !room) {
-    alert("Enter Name and Room Code");
-    return;
-  }
+  if (!name || !room) return alert("Enter Name and Room Code");
 
   roomCode = room;
   socket.emit("joinRoom", { room, name });
   statusText.innerText = "Waiting for another player...";
 });
 
-// Receive player updates
+// Update players
 socket.on("playersUpdate", players => {
   playersList.innerHTML = "";
   players.forEach(p => {
     const li = document.createElement("li");
     li.innerText = `${p.name} (${p.role}) - Score: ${p.score}`;
     playersList.appendChild(li);
-    if (p.id === socket.id) {
-      role = p.role;
-      myId = p.id;
-    }
+    if (p.id === socket.id) role = p.role;
   });
 });
 
-// Game Start
+// Game start
 socket.on("gameStart", () => {
-  statusText.style.display = "none";
   document.querySelector(".lobby").style.display = "none";
   gameArea.style.display = "block";
   roleText.innerText = `You are the ${role}`;
 });
 
-// Drawing logic (only drawer can draw)
-canvas.onmousedown = () => {
-  if (role !== "drawer") return;
-  drawing = true;
-};
-canvas.onmouseup = () => {
-  drawing = false;
-};
+// Drawing
+canvas.onmousedown = () => { if(role==='drawer') drawing = true; };
+canvas.onmouseup = () => { drawing = false; };
 canvas.onmousemove = e => {
-  if (!drawing || role !== "drawer") return;
-  const x = e.offsetX;
-  const y = e.offsetY;
-  ctx.fillRect(x, y, 3, 3);
-  socket.emit("draw", { room: roomCode, x, y });
+  if(!drawing || role!=='drawer') return;
+  const x=e.offsetX, y=e.offsetY;
+  ctx.fillRect(x,y,3,3);
+  socket.emit("draw",{room:roomCode,x,y});
 };
 
 // Receive drawing
-socket.on("draw", data => {
-  ctx.fillRect(data.x, data.y, 3, 3);
-});
+socket.on("draw", d => { ctx.fillRect(d.x,d.y,3,3); });
 
-// Send guess
+// Guessing
 guessBtn.addEventListener("click", () => {
   const guess = guessInput.value.trim();
-  if (!guess) return;
-  socket.emit("guess", { room: roomCode, guess });
-  guessInput.value = "";
+  if(!guess) return;
+  socket.emit("checkGuess",{room:roomCode,guess});
+  guessInput.value="";
 });
 
-// Receive guess
-socket.on("guess", data => {
-  const player = playersList.querySelector(`li:contains('${data.playerId}')`);
-  alert(`Opponent guessed: ${data.guess}`);
+// Round ended
+socket.on("roundEnded", data => {
+  alert(`Round Ended!\nWinner: ${data.winner}\nYour Score: ${role==='drawer'?data.drawerScore:data.guesserScore}`);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 });
