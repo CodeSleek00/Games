@@ -19,7 +19,7 @@ function createRoom(roomKey) {
             guesser: null,
             boxes: initBoxes(),
             round: 1,
-            maxRounds: 3,
+            maxRounds: 6, // Total 6 rounds (3 turns for each player as guesser)
             gameState: "waiting", // waiting, setting, guessing, roundEnd, gameOver
             confirmed: false
         };
@@ -53,8 +53,10 @@ function broadcastRoomData(roomKey) {
 }
 
 function checkGameEnd(room) {
+    // Each player gets 3 turns as guesser (total 6 rounds)
+    const roundsPerPlayer = 3;
     const allPlayersPlayed = Object.values(room.players).every(
-        player => player.roundsPlayed >= room.maxRounds
+        player => player.roundsPlayed >= roundsPerPlayer
     );
     
     if (allPlayersPlayed && room.round > room.maxRounds) {
@@ -114,7 +116,7 @@ io.on("connection", (socket) => {
         callback({ success: true });
     });
 
-    // Setter selects boxes (red/bomb)
+    // Setter selects boxes (red/bomb) or clears them
     socket.on("setBox", (data) => {
         if (!joinedRoom) return;
         const room = rooms[joinedRoom];
@@ -122,9 +124,22 @@ io.on("connection", (socket) => {
         if (room.gameState !== "setting") return;
         
         const box = room.boxes[data.index];
-        if (!box || box.opened || box.content) return;
+        if (!box || box.opened) return;
 
-        box.content = data.content;
+        // Allow setting or clearing content
+        if (data.content === null) {
+            // Clear the box
+            box.content = null;
+            // Also clear any green boxes that were auto-filled
+            room.boxes.forEach(b => {
+                if (b.content === "green" && !b.opened) {
+                    b.content = null;
+                }
+            });
+        } else {
+            // Set new content
+            box.content = data.content;
+        }
 
         // Check if selection complete
         const redCount = room.boxes.filter(b => b.content === "red").length;
@@ -190,15 +205,15 @@ io.on("connection", (socket) => {
         const otherPlayerId = Object.keys(room.players).find(id => id !== socket.id);
         const otherPlayer = room.players[otherPlayerId];
         
-        if (otherPlayer && otherPlayer.roundsPlayed < room.maxRounds) {
-            // Switch roles for next round
-            nextTurn(room);
-            io.to(joinedRoom).emit("roundEnd", {
-                round: room.round - 1,
-                maxRounds: room.maxRounds,
-                reason: "submitted"
-            });
-        } else if (room.round < room.maxRounds) {
+            if (otherPlayer && otherPlayer.roundsPlayed < 3) {
+                // Switch roles for next round
+                nextTurn(room);
+                io.to(joinedRoom).emit("roundEnd", {
+                    round: room.round - 1,
+                    maxRounds: room.maxRounds,
+                    reason: "submitted"
+                });
+            } else if (room.round < room.maxRounds) {
             // Continue with same roles, new round
             room.boxes = initBoxes();
             room.confirmed = false;
@@ -265,7 +280,7 @@ io.on("connection", (socket) => {
             const otherPlayerId = Object.keys(room.players).find(id => id !== socket.id);
             const otherPlayer = room.players[otherPlayerId];
             
-            if (otherPlayer && otherPlayer.roundsPlayed < room.maxRounds) {
+            if (otherPlayer && otherPlayer.roundsPlayed < 3) {
                 // Switch roles for next round
                 nextTurn(room);
                 io.to(joinedRoom).emit("roundEnd", {

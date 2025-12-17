@@ -111,22 +111,65 @@ function renderBoxes() {
                 div.textContent = "💣";
             }
         } else {
-            div.textContent = "?";
+            // Show setter's selection even if not opened (only visible to setter)
+            if (myId === roomData.setter && box.content && roomData.gameState === "setting") {
+                if (box.content === "red") {
+                    div.classList.add("red");
+                    div.style.opacity = "0.9";
+                    div.style.border = "3px solid #ef4444";
+                    div.style.boxShadow = "0 0 15px rgba(239, 68, 68, 0.5)";
+                    div.textContent = "⚑";
+                    div.title = "Red Flag (Click to remove)";
+                } else if (box.content === "bomb") {
+                    div.classList.add("bomb");
+                    div.style.opacity = "0.9";
+                    div.style.border = "3px solid #1f2937";
+                    div.style.boxShadow = "0 0 15px rgba(31, 41, 55, 0.5)";
+                    div.textContent = "💣";
+                    div.title = "Bomb (Click to remove)";
+                } else if (box.content === "green") {
+                    div.classList.add("green");
+                    div.style.opacity = "0.7";
+                    div.textContent = "✅";
+                    div.title = "Green (Auto-filled)";
+                }
+            } else {
+                div.textContent = "?";
+            }
         }
 
-        // Setter can select boxes
-        if (myId === roomData.setter && !box.opened && !box.content) {
+        // Setter can select/change boxes (before confirming)
+        if (myId === roomData.setter && !box.opened && roomData.gameState === "setting") {
             div.onclick = () => {
-                if (selectedRed < 3) {
-                    box.content = "red";
-                    selectedRed++;
-                    socket.emit("setBox", { index: idx, content: box.content });
+                // If box already has content, allow changing it
+                if (box.content === "red") {
+                    box.content = null;
+                    selectedRed--;
+                    socket.emit("setBox", { index: idx, content: null });
                     updateSelectionStatus();
-                } else if (selectedBomb < 1) {
-                    box.content = "bomb";
-                    selectedBomb++;
-                    socket.emit("setBox", { index: idx, content: box.content });
+                } else if (box.content === "bomb") {
+                    box.content = null;
+                    selectedBomb--;
+                    socket.emit("setBox", { index: idx, content: null });
                     updateSelectionStatus();
+                } else if (box.content === "green") {
+                    box.content = null;
+                    socket.emit("setBox", { index: idx, content: null });
+                    updateSelectionStatus();
+                }
+                // If box is empty, allow selecting
+                else if (!box.content) {
+                    if (selectedRed < 3) {
+                        box.content = "red";
+                        selectedRed++;
+                        socket.emit("setBox", { index: idx, content: box.content });
+                        updateSelectionStatus();
+                    } else if (selectedBomb < 1) {
+                        box.content = "bomb";
+                        selectedBomb++;
+                        socket.emit("setBox", { index: idx, content: box.content });
+                        updateSelectionStatus();
+                    }
                 }
             };
         }
