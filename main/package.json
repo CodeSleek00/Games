@@ -1,7 +1,7 @@
 {
   "name": "treasure-game",
   "version": "1.0.0",
-  "description": "Advanced Multiplayer Treasure Hunt Game",
+  "description": "Easy Treasure Hunt Multiplayer Game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

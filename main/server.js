@@ -8,7 +8,6 @@ app.use(express.static("public"));
 let rooms = {}; // roomKey => room data
 
 function initBoxes() {
-    // Create 9 empty boxes
     return Array.from({length:9},()=>({content:null, opened:false}));
 }
 
@@ -16,13 +15,11 @@ function createRoom(roomKey){
     if(!rooms[roomKey]){
         rooms[roomKey] = {
             players:{}, // socket.id => {name, score, roundsPlayed}
-            turnOrder:[],
-            currentTurn:0,
+            setter:null,
+            guesser:null,
             boxes:initBoxes(),
             round:1,
             maxRounds:3,
-            setter:null, // player who sets boxes
-            guesser:null // player who guesses
         };
         console.log("Room created:", roomKey);
     }
@@ -32,8 +29,7 @@ function createRoom(roomKey){
 createRoom("ROOM123");
 
 function nextTurn(room){
-    // Switch setter/guesser if round complete
-    if(room.round > room.maxRounds) return;
+    // Swap setter and guesser after rounds
     const temp = room.setter;
     room.setter = room.guesser;
     room.guesser = temp;
@@ -45,7 +41,6 @@ io.on("connection",(socket)=>{
     console.log("Connected:", socket.id);
     let joinedRoom = null;
 
-    // Join room
     socket.on("joinRoom",(roomKey, playerName,callback)=>{
         if(!rooms[roomKey]){
             callback({success:false,message:"Invalid Room Key"});
@@ -61,8 +56,7 @@ io.on("connection",(socket)=>{
 
         room.players[socket.id] = {id:socket.id,name:playerName,score:0,roundsPlayed:0};
         const ids = Object.keys(room.players);
-        if(ids.length===2){
-            // assign setter and guesser
+        if(ids.length===2 && !room.setter && !room.guesser){
             room.setter = ids[0];
             room.guesser = ids[1];
         }
@@ -72,11 +66,22 @@ io.on("connection",(socket)=>{
         callback({success:true});
     });
 
-    // Setter sets box
+    // Setter selects Red/Bomb box
     socket.on("setBox",(data)=>{
         const room = rooms[joinedRoom];
         if(socket.id!==room.setter) return;
         if(room.boxes[data.index]) room.boxes[data.index].content = data.content;
+
+        // Count red and bomb
+        const redCount = room.boxes.filter(b=>b.content==="red").length;
+        const bombCount = room.boxes.filter(b=>b.content==="bomb").length;
+        if(redCount===3 && bombCount===1){
+            // Fill remaining boxes as green automatically
+            room.boxes.forEach(b=>{
+                if(!b.content) b.content="green";
+            });
+        }
+
         io.to(joinedRoom).emit("roomData",room);
     });
 
@@ -99,10 +104,8 @@ io.on("connection",(socket)=>{
         if(box.content==="bomb" || allOpened){
             player.roundsPlayed++;
             if(player.roundsPlayed>=room.maxRounds){
-                // Round over for this player, switch roles
                 nextTurn(room);
             } else {
-                // reset boxes for next round for same roles
                 room.boxes = initBoxes();
             }
             io.to(joinedRoom).emit("roomData",room);
@@ -113,8 +116,8 @@ io.on("connection",(socket)=>{
         if(!joinedRoom) return;
         const room = rooms[joinedRoom];
         delete room.players[socket.id];
-        room.setter = null;
-        room.guesser = null;
+        if(room.setter===socket.id) room.setter=null;
+        if(room.guesser===socket.id) room.guesser=null;
         io.to(joinedRoom).emit("roomData",room);
     });
 });

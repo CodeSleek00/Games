@@ -48,10 +48,10 @@ function renderBoxes(){
             if(myId===roomData.guesser && !box.opened){
                 socket.emit("guessBox",idx);
             } else if(myId===roomData.setter && !box.opened){
-                const c = prompt("Set box (green/red/bomb)").toLowerCase();
-                if(["green","red","bomb"].includes(c)){
-                    socket.emit("setBox",{index:idx,content:c});
-                } else alert("Invalid!");
+                const content = prompt("Set box (red/bomb)").toLowerCase();
+                if(["red","bomb"].includes(content)){
+                    socket.emit("setBox",{index:idx,content:content});
+                } else alert("Only Red or Bomb allowed!");
             }
         };
         boxesContainer.appendChild(div);
@@ -73,7 +73,7 @@ function updateUI(){
     renderBoxes();
     renderScoreboard();
     roundInfo.textContent = `Round: ${roomData.round}/${roomData.maxRounds}`;
-    if(myId===roomData.setter) roleInfo.textContent="Role: Box Setter";
+    if(myId===roomData.setter) roleInfo.textContent="Role: Box Setter (Select 3 Red + 1 Bomb)";
     else if(myId===roomData.guesser) roleInfo.textContent="Role: Guesser";
     else roleInfo.textContent="Role: Waiting";
     turnInfo.textContent = `Guesser: ${roomData.guesser?roomData.players[roomData.guesser].name:"-"}`;
