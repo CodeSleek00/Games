@@ -1,20 +1,45 @@
 body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     font-family: Arial, sans-serif;
-    background-color: #111;
+    text-align: center;
+    background: #111;
     color: #fff;
     margin: 0;
     padding: 20px;
 }
 
-canvas {
-    background-color: #222;
-    border: 2px solid #fff;
-    margin-top: 20px;
+#boxesContainer {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px;
 }
 
-p {
-    font-size: 16px;
+.box {
+    width: 80px;
+    height: 80px;
+    background: #444;
+    border: 2px solid #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.box.opened {
+    background: #0f0;
+    cursor: default;
+    transform: scale(1.1);
+}
+
+#turnInfo {
+    font-size: 20px;
+    margin: 10px 0;
+}
+
+#scoreboard {
+    list-style: none;
+    padding: 0;
+    font-size: 18px;
 }

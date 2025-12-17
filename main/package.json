@@ -1,7 +1,7 @@
 {
-  "name": "multiplayer-game",
+  "name": "treasure-game",
   "version": "1.0.0",
-  "description": "Simple multiplayer game using Node.js and Socket.IO",
+  "description": "Multiplayer Treasure Hunt / Box Guessing Game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

@@ -2,13 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Circle Tag Multiplayer Game</title>
+    <title>Treasure Hunt Multiplayer</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Circle Tag Multiplayer Game</h1>
-    <p>Use arrow keys to move. Earn points by touching other players!</p>
-    <canvas id="gameCanvas" width="600" height="600"></canvas>
+    <h1>🎁 Treasure Hunt Multiplayer 🎁</h1>
+    <div id="turnInfo"></div>
+    <div id="boxesContainer"></div>
+    <h2>Scoreboard</h2>
+    <ul id="scoreboard"></ul>
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="client.js"></script>
 </body>

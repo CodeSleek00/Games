@@ -1,44 +1,66 @@
 const socket = io();
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+const boxesContainer = document.getElementById("boxesContainer");
+const scoreboard = document.getElementById("scoreboard");
+const turnInfo = document.getElementById("turnInfo");
 
+let boxes = [];
 let players = {};
-let speed = 5;
+let myId = null;
+let currentTurn = null;
 
-// Listen to player updates
-socket.on("players", (data) => {
-    players = data;
-    drawPlayers();
-});
-
-function drawPlayers() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for(let id in players){
-        let p = players[id];
-        // Draw player circle
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 20, 0, Math.PI*2);
-        ctx.fill();
-
-        // Draw name
-        ctx.fillStyle = "#fff";
-        ctx.font = "14px Arial";
-        ctx.fillText(p.name, p.x - 20, p.y - 25);
-
-        // Draw score
-        ctx.fillStyle = "#0f0";
-        ctx.fillText("Score: " + p.score, p.x - 20, p.y + 35);
-    }
+// Generate boxes visually
+function renderBoxes() {
+    boxesContainer.innerHTML = "";
+    boxes.forEach((box, idx) => {
+        const div = document.createElement("div");
+        div.classList.add("box");
+        if(box.opened) div.classList.add("opened");
+        div.textContent = box.opened ? box.content || "Empty" : "?";
+        div.onclick = () => {
+            if(!box.opened && myId === currentTurn){
+                socket.emit("guessBox", idx);
+            }
+        };
+        boxesContainer.appendChild(div);
+    });
 }
 
-// Movement
-document.addEventListener("keydown", (e) => {
-    let dx=0, dy=0;
-    if(e.key === "ArrowUp") dy = -speed;
-    if(e.key === "ArrowDown") dy = speed;
-    if(e.key === "ArrowLeft") dx = -speed;
-    if(e.key === "ArrowRight") dx = speed;
+// Update scoreboard
+function renderScoreboard() {
+    scoreboard.innerHTML = "";
+    Object.values(players).forEach(p => {
+        const li = document.createElement("li");
+        li.textContent = `${p.name}: ${p.score}`;
+        scoreboard.appendChild(li);
+    });
+}
 
-    socket.emit("move", {dx, dy});
+// Listen to server updates
+socket.on("players", (data) => {
+    players = data;
+    renderScoreboard();
+    if(!myId) myId = socket.id;
+});
+
+socket.on("boxes", (data) => {
+    boxes = data;
+    renderBoxes();
+});
+
+socket.on("turn", (id) => {
+    currentTurn = id;
+    const name = players[id] ? players[id].name : "Unknown";
+    turnInfo.textContent = `🎯 Turn: ${name}`;
+});
+
+// Optional: Set treasure (for testing purposes)
+window.addEventListener("load", () => {
+    if(myId){
+        boxes.forEach((b, idx) => {
+            if(!b.content){
+                const content = prompt(`Set treasure for box ${idx+1} (your name will do)`,"Treasure") || "";
+                socket.emit("setTreasure", {index: idx, content});
+            }
+        });
+    }
 });
