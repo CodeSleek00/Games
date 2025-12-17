@@ -17,7 +17,7 @@
 
     <button onclick="joinRoom()">Join Room</button>
 
-    <p id="status"></p>
+    <p id="status">Waiting to join room...</p>
 
     <button id="startBtn" style="display:none;" onclick="startGame()">
         Start Game
@@ -26,7 +26,7 @@
 
 <script>
 let joinedRoom = "";
-let checkInterval = null;
+let polling = null;
 
 function joinRoom() {
     const name = document.getElementById("name").value.trim();
@@ -43,29 +43,28 @@ function joinRoom() {
         method: "POST",
         headers: {"Content-Type":"application/x-www-form-urlencoded"},
         body: "name="+encodeURIComponent(name)+"&room="+encodeURIComponent(room)
-    })
-    .then(r=>r.json())
-    .then(data=>{
-        document.getElementById("status").innerText = data.msg;
-
-        /* START CHECKING ROOM EVERY 2s */
-        if (!checkInterval) {
-            checkInterval = setInterval(checkRoomStatus, 2000);
-        }
+    }).then(() => {
+        document.getElementById("status").innerText =
+            "⏳ Waiting for another player...";
+        startPolling();
     });
 }
 
-function checkRoomStatus() {
-    fetch("check_room.php?room="+encodeURIComponent(joinedRoom))
-    .then(r=>r.json())
-    .then(data=>{
-        if (data.ready) {
-            document.getElementById("status").innerText =
-                "✅ Both players joined!";
-            document.getElementById("startBtn").style.display = "inline-block";
-            clearInterval(checkInterval);
-        }
-    });
+function startPolling() {
+    if (polling) return;
+
+    polling = setInterval(() => {
+        fetch("check_room.php?room="+encodeURIComponent(joinedRoom))
+        .then(r => r.json())
+        .then(data => {
+            if (data.ready) {
+                document.getElementById("status").innerText =
+                    "✅ Both players joined!";
+                document.getElementById("startBtn").style.display = "inline-block";
+                clearInterval(polling);
+            }
+        });
+    }, 1500);
 }
 
 function startGame() {
