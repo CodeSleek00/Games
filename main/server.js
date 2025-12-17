@@ -1,115 +1,60 @@
 const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-const path = require("path");
-
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const http = require("http").createServer(app);
+const io = require("socket.io")(http);
 
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static("public"));
 
-let rooms = {}; // { roomCode: { players: [{id,name,score,role}], timer, round } }
+let players = {};
 
-io.on("connection", socket => {
-  console.log("User connected:", socket.id);
+io.on("connection", (socket) => {
+    console.log("Player connected:", socket.id);
+    
+    // Initialize new player
+    players[socket.id] = {
+        x: Math.random() * 500,
+        y: Math.random() * 500,
+        color: "#" + Math.floor(Math.random()*16777215).toString(16),
+        score: 0,
+        name: `Player${Math.floor(Math.random()*1000)}`
+    };
 
-  socket.on("joinRoom", ({ room, name }) => {
-    socket.join(room);
+    // Send all players to everyone
+    io.emit("players", players);
 
-    if (!rooms[room]) rooms[room] = { players: [], round: 1, timer: null };
+    // Move event
+    socket.on("move", (data) => {
+        if(players[socket.id]){
+            players[socket.id].x += data.dx;
+            players[socket.id].y += data.dy;
 
-    if (rooms[room].players.length < 2) {
-      const role = rooms[room].players.length === 0 ? "drawer" : "guesser";
-      rooms[room].players.push({ id: socket.id, name, score: 0, role });
-    }
+            // Keep inside canvas
+            players[socket.id].x = Math.max(20, Math.min(580, players[socket.id].x));
+            players[socket.id].y = Math.max(20, Math.min(580, players[socket.id].y));
 
-    io.to(room).emit("playersUpdate", rooms[room].players);
+            // Collision detection: earn points for touching others
+            for(let id in players){
+                if(id !== socket.id){
+                    let p = players[id];
+                    let dx = players[socket.id].x - p.x;
+                    let dy = players[socket.id].y - p.y;
+                    let distance = Math.sqrt(dx*dx + dy*dy);
+                    if(distance < 40){ // circle radius sum
+                        players[socket.id].score += 1;
+                    }
+                }
+            }
+            io.emit("players", players);
+        }
+    });
 
-    if (rooms[room].players.length === 2) startRound(room);
-  });
-
-  // Drawing
-  socket.on("draw", data => {
-    socket.to(data.room).emit("draw", data);
-  });
-
-  // Guessing
-  socket.on("checkGuess", ({ room, guess }) => {
-    const roomObj = rooms[room];
-    if (!roomObj) return;
-
-    const drawer = roomObj.players.find(p => p.role === "drawer");
-    const guesser = roomObj.players.find(p => p.id === socket.id);
-
-    if (!drawer || !guesser) return;
-
-    if (guess.toLowerCase() === drawer.name.toLowerCase()) {
-      // Calculate points based on timer
-      const remainingTime = roomObj.remainingTime || 60;
-      const guesserPoints = 100 + Math.floor(remainingTime / 2); // fast guess bonus
-      const drawerPoints = 50;
-
-      guesser.score += guesserPoints;
-      drawer.score += drawerPoints;
-
-      io.to(room).emit("roundEnded", {
-        winner: guesser.name,
-        guesserScore: guesser.score,
-        drawerScore: drawer.score,
-        remainingTime,
-        guesserPoints,
-        drawerPoints
-      });
-
-      switchRoles(room);
-      startRound(room);
-    }
-  });
-
-  socket.on("disconnect", () => {
-    for (let room in rooms) {
-      rooms[room].players = rooms[room].players.filter(p => p.id !== socket.id);
-      io.to(room).emit("playersUpdate", rooms[room].players);
-      if (rooms[room].players.length === 0) {
-        clearInterval(rooms[room].timer);
-        delete rooms[room];
-      }
-    }
-    console.log("User disconnected:", socket.id);
-  });
+    // Disconnect
+    socket.on("disconnect", () => {
+        console.log("Player disconnected:", socket.id);
+        delete players[socket.id];
+        io.emit("players", players);
+    });
 });
 
-// Helper functions
-
-function startRound(room) {
-  const roomObj = rooms[room];
-  if (!roomObj) return;
-
-  roomObj.remainingTime = 60;
-  io.to(room).emit("newRound", { round: roomObj.round, remainingTime: roomObj.remainingTime });
-
-  clearInterval(roomObj.timer);
-  roomObj.timer = setInterval(() => {
-    roomObj.remainingTime--;
-    io.to(room).emit("timerUpdate", roomObj.remainingTime);
-    if (roomObj.remainingTime <= 0) {
-      io.to(room).emit("roundEnded", { winner: null });
-      switchRoles(room);
-      roomObj.round++;
-      startRound(room);
-    }
-  }, 1000);
-}
-
-function switchRoles(room) {
-  const roomObj = rooms[room];
-  if (!roomObj) return;
-  roomObj.players.forEach(p => {
-    p.role = p.role === "drawer" ? "guesser" : "drawer";
-  });
-  io.to(room).emit("playersUpdate", roomObj.players);
-}
-
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+http.listen(PORT, () => console.log(`Server running on port ${PORT}`));

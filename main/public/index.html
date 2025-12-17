@@ -1,40 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Draw & Guess Game</title>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <title>Circle Tag Multiplayer Game</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<div class="container">
-
-<h1>🎨 Draw & Guess</h1>
-
-<div class="lobby">
-  <input id="name" type="text" placeholder="Your Name">
-  <input id="room" type="text" placeholder="Room Code">
-  <button id="joinBtn">Join Room</button>
-  <p id="status">Enter name and room code to join</p>
-</div>
-
-<div class="gameArea" style="display:none;">
-  <p id="roleText"></p>
-  <p id="roundText"></p>
-  <p id="timerText">Time: 60</p>
-  <canvas id="canvas" width="600" height="400"></canvas>
-  <div class="guessArea">
-    <input id="guess" type="text" placeholder="Type your guess">
-    <button id="guessBtn">Guess</button>
-  </div>
-  <div class="scoreBoard">
-    <h3>Players</h3>
-    <ul id="playersList"></ul>
-  </div>
-  <div id="messages"></div>
-</div>
-
-<script src="/socket.io/socket.io.js"></script>
-<script src="game.js"></script>
+    <h1>Circle Tag Multiplayer Game</h1>
+    <p>Use arrow keys to move. Earn points by touching other players!</p>
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
 </body>
 </html>
