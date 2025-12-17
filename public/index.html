@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Draw & Guess Game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+
+  <h1>🎨 Draw & Guess</h1>
+
+  <div class="lobby">
+    <input id="name" type="text" placeholder="Your Name">
+    <input id="room" type="text" placeholder="Room Code (e.g. 1234)">
+    <button id="joinBtn">Join Room</button>
+    <p id="status">Enter your name and room code to join</p>
+  </div>
+
+  <div class="gameArea" style="display:none;">
+    <p id="roleText"></p>
+    <canvas id="canvas" width="600" height="400"></canvas>
+    <div class="guessArea">
+      <input id="guess" type="text" placeholder="Type your guess">
+      <button id="guessBtn">Guess</button>
+    </div>
+    <div class="scoreBoard">
+      <h3>Players</h3>
+      <ul id="playersList"></ul>
+    </div>
+  </div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
