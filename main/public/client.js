@@ -13,6 +13,7 @@ const gameOver = document.getElementById("gameOver");
 const lobbyMsg = document.getElementById("lobbyMsg");
 const joinBtn = document.getElementById("joinBtn");
 const confirmBtn = document.getElementById("confirmBtn");
+const submitBtn = document.getElementById("submitBtn");
 const leaveBtn = document.getElementById("leaveBtn");
 const playAgainBtn = document.getElementById("playAgainBtn");
 const newGameBtn = document.getElementById("newGameBtn");
@@ -173,6 +174,15 @@ confirmBtn.onclick = () => {
     }
 };
 
+// Submit Turn (Guesser can end turn early)
+submitBtn.onclick = () => {
+    if (confirm("Are you sure you want to submit? You'll keep your current score and end your turn.")) {
+        socket.emit("submitTurn");
+        submitBtn.style.display = "none";
+        showMessage(gameMessage, "Turn submitted! Your score is safe.", "success");
+    }
+};
+
 // Render Scoreboard
 function renderScoreboard() {
     scoreboard.innerHTML = "";
@@ -263,8 +273,9 @@ function updateUI() {
             showMessage(gameMessage, "Click confirm when ready", "success");
         }
     } else if (myId === roomData.guesser) {
-        if (roomData.boxes && roomData.boxes.some(b => b.content && !b.opened)) {
-            showMessage(gameMessage, "Click boxes to reveal! Find green for points!", "");
+        const hasUnopenedBoxes = roomData.boxes && roomData.boxes.some(b => b.content && !b.opened);
+        if (hasUnopenedBoxes) {
+            showMessage(gameMessage, "Click boxes to reveal! Find green for points! Or submit to keep your score safe.", "");
         } else {
             showMessage(gameMessage, "Waiting for setter to place boxes...", "");
         }
@@ -272,11 +283,24 @@ function updateUI() {
         showMessage(gameMessage, "Waiting for another player to join...", "");
     }
     
-    // Confirm Button
+    // Confirm Button (for Setter)
     if (myId === roomData.setter && selectedRed === 3 && selectedBomb === 1) {
         confirmBtn.style.display = "block";
     } else {
         confirmBtn.style.display = "none";
+    }
+    
+    // Submit Button (for Guesser)
+    if (myId === roomData.guesser && roomData.gameState === "guessing") {
+        const hasUnopenedBoxes = roomData.boxes && roomData.boxes.some(b => b.content && !b.opened);
+        const hasOpenedBoxes = roomData.boxes && roomData.boxes.some(b => b.opened);
+        if (hasUnopenedBoxes && hasOpenedBoxes) {
+            submitBtn.style.display = "block";
+        } else {
+            submitBtn.style.display = "none";
+        }
+    } else {
+        submitBtn.style.display = "none";
     }
     
     updateSelectionStatus();
@@ -308,6 +332,12 @@ socket.on("startGuessing", () => {
     showMessage(gameMessage, "🎮 Guessing phase started! Click boxes to reveal!", "success");
     resetSelection();
     updateUI();
+});
+
+// Turn submitted successfully
+socket.on("turnSubmitted", (data) => {
+    showMessage(gameMessage, `✓ Turn submitted! You kept your score of ${data.score} points.`, "success");
+    submitBtn.style.display = "none";
 });
 
 // Box revealed feedback

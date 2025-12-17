@@ -158,6 +158,65 @@ io.on("connection", (socket) => {
         }
     });
 
+    // Guesser submits turn early (keeps current score)
+    socket.on("submitTurn", () => {
+        if (!joinedRoom) return;
+        const room = rooms[joinedRoom];
+        if (!room || socket.id !== room.guesser) return;
+        if (room.gameState !== "guessing") return;
+
+        const player = room.players[socket.id];
+        const hasOpenedBoxes = room.boxes.some(b => b.opened);
+        
+        // Only allow submit if player has opened at least one box
+        if (!hasOpenedBoxes) {
+            return;
+        }
+
+        // Player keeps their current score, round ends
+        player.roundsPlayed++;
+        
+        // Notify player
+        socket.emit("turnSubmitted", {
+            score: player.score
+        });
+
+        // Check if game should end
+        if (checkGameEnd(room)) {
+            return;
+        }
+
+        // Check if we need to switch turns
+        const otherPlayerId = Object.keys(room.players).find(id => id !== socket.id);
+        const otherPlayer = room.players[otherPlayerId];
+        
+        if (otherPlayer && otherPlayer.roundsPlayed < room.maxRounds) {
+            // Switch roles for next round
+            nextTurn(room);
+            io.to(joinedRoom).emit("roundEnd", {
+                round: room.round - 1,
+                maxRounds: room.maxRounds,
+                reason: "submitted"
+            });
+        } else if (room.round < room.maxRounds) {
+            // Continue with same roles, new round
+            room.boxes = initBoxes();
+            room.confirmed = false;
+            room.gameState = "setting";
+            io.to(joinedRoom).emit("roundEnd", {
+                round: room.round,
+                maxRounds: room.maxRounds,
+                reason: "submitted"
+            });
+        } else {
+            // Game over
+            room.gameState = "gameOver";
+            io.to(joinedRoom).emit("gameOver", room);
+        }
+        
+        broadcastRoomData(joinedRoom);
+    });
+
     // Guesser guesses
     socket.on("guessBox", (index) => {
         if (!joinedRoom) return;
