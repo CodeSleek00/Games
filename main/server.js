@@ -8,20 +8,16 @@ app.use(express.static("public"));
 let players = {};
 let turnOrder = [];
 let currentTurn = 0;
-let boxes = []; // array of treasures
+let boxes = [];
 
-const BOX_COUNT = 6;
-
-// Initialize boxes
-function resetBoxes() {
-    boxes = [];
-    for (let i = 0; i < BOX_COUNT; i++) {
-        boxes.push({ content: null, opened: false });
-    }
+// Initialize boxes with content
+function initBoxes() {
+    const contents = ["bomb", "red","red","red","green","green","green","green","green"];
+    boxes = contents.sort(() => Math.random() - 0.5).map(c => ({ content: c, opened: false }));
 }
-resetBoxes();
 
-// Assign turn
+initBoxes();
+
 function nextTurn() {
     if(turnOrder.length === 0) return null;
     currentTurn = (currentTurn + 1) % turnOrder.length;
@@ -39,42 +35,40 @@ io.on("connection", (socket) => {
 
     turnOrder = Object.keys(players);
 
-    // Send initial data
     io.emit("players", players);
     io.emit("boxes", boxes);
     io.emit("turn", turnOrder[currentTurn]);
 
-    // Player sets treasure
-    socket.on("setTreasure", (data) => {
-        if(data.index >= 0 && data.index < BOX_COUNT) {
-            boxes[data.index].content = data.content;
-        }
-        io.emit("boxes", boxes);
-    });
-
-    // Player guesses a box
+    // Player guesses box
     socket.on("guessBox", (index) => {
-        if(socket.id !== turnOrder[currentTurn]) return; // Not this player's turn
+        if(socket.id !== turnOrder[currentTurn]) return; // Not player's turn
         if(boxes[index].opened) return; // Already opened
 
         boxes[index].opened = true;
+        const content = boxes[index].content;
 
-        // Award points if content matches guesser name
-        if(boxes[index].content && boxes[index].content !== "") {
-            if(players[turnOrder[currentTurn]]){
-                players[turnOrder[currentTurn]].score += 1;
-            }
+        if(players[socket.id]){
+            if(content === "green") players[socket.id].score += 10;
+            else if(content === "red") players[socket.id].score -= 5;
+            else if(content === "bomb") players[socket.id].score = 0;
         }
 
         io.emit("boxes", boxes);
         io.emit("players", players);
 
-        // Move to next turn
+        // If bomb or all boxes opened, reset boxes for next turn
+        const allOpened = boxes.every(b => b.opened);
+        if(content === "bomb" || allOpened){
+            initBoxes();
+            boxes.forEach(b => b.opened = false);
+            io.emit("boxes", boxes);
+        }
+
+        // Next turn
         nextTurn();
         io.emit("turn", turnOrder[currentTurn]);
     });
 
-    // Disconnect
     socket.on("disconnect", () => {
         console.log("Player disconnected:", socket.id);
         delete players[socket.id];

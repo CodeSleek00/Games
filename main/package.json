@@ -1,7 +1,7 @@
 {
   "name": "treasure-game",
   "version": "1.0.0",
-  "description": "Multiplayer Treasure Hunt / Box Guessing Game",
+  "description": "Treasure Hunt Multiplayer Game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
