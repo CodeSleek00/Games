@@ -1,36 +1,42 @@
 <?php
 session_start();
 
-/* Initialize players array */
-if (!isset($_SESSION['players'])) {
-    $_SESSION['players'] = [];
-}
+$name = trim($_POST['name'] ?? '');
+$room = trim($_POST['room'] ?? '');
 
-$name = trim($_POST['name'] ?? "");
-
-/* Validate name */
-if ($name == "") {
+if($name == "" || $room == ""){
     echo json_encode([
-        "msg" => "❌ Name cannot be empty",
+        "msg" => "❌ Name or Room Code missing",
         "ready" => false
     ]);
     exit;
 }
 
-/* Allow only 2 players */
-if (count($_SESSION['players']) < 2) {
-    if (!in_array($name, $_SESSION['players'])) {
-        $_SESSION['players'][] = $name;
+/* Create room if not exists */
+if(!isset($_SESSION['rooms'])){
+    $_SESSION['rooms'] = [];
+}
+
+if(!isset($_SESSION['rooms'][$room])){
+    $_SESSION['rooms'][$room] = [];
+}
+
+/* Max 2 players per room */
+if(count($_SESSION['rooms'][$room]) < 2){
+    if(!in_array($name, $_SESSION['rooms'][$room])){
+        $_SESSION['rooms'][$room][] = $name;
     }
 }
 
-/* Check if lobby is full */
-$ready = (count($_SESSION['players']) === 2);
+$ready = count($_SESSION['rooms'][$room]) == 2;
+
+/* Save user's room */
+$_SESSION['current_room'] = $room;
 
 echo json_encode([
     "msg" => $ready 
-        ? "✅ Both players joined. You can start the game!" 
+        ? "✅ Room full! Start the game"
         : "⏳ Waiting for another player...",
     "ready" => $ready,
-    "players" => $_SESSION['players']
+    "players" => $_SESSION['rooms'][$room]
 ]);

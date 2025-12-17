@@ -1,8 +1,5 @@
 <?php
 session_start();
-if (!isset($_SESSION['players'])) {
-    $_SESSION['players'] = [];
-}
 ?>
 <!DOCTYPE html>
 <html>
@@ -15,9 +12,12 @@ if (!isset($_SESSION['players'])) {
 <div class="game">
     <h1>🎮 Draw & Guess Lobby</h1>
 
-    <input type="text" id="name" placeholder="Enter your name">
+    <input type="text" id="room" placeholder="Enter Room Code (e.g. 1234)">
     <br><br>
-    <button onclick="joinGame()">Join Game</button>
+    <input type="text" id="name" placeholder="Enter Your Name">
+    <br><br>
+
+    <button onclick="joinRoom()">Join Room</button>
 
     <p id="status"></p>
 
@@ -27,28 +27,30 @@ if (!isset($_SESSION['players'])) {
 </div>
 
 <script>
-function joinGame() {
+function joinRoom() {
     let name = document.getElementById("name").value;
-    if(name === "") {
-        alert("Enter your name");
+    let room = document.getElementById("room").value;
+
+    if(name === "" || room === ""){
+        alert("Enter name and room code");
         return;
     }
 
     fetch("join.php", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: "name=" + name
+        body: "name=" + name + "&room=" + room
     })
     .then(res => res.json())
     .then(data => {
         document.getElementById("status").innerText = data.msg;
-        if (data.ready) {
+        if(data.ready){
             document.getElementById("startBtn").style.display = "inline-block";
         }
     });
 }
 
-function startGame() {
+function startGame(){
     window.location = "index.php";
 }
 </script>
