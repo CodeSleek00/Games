@@ -1,10 +1,7 @@
-<?php
-session_start();
-?>
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Game Lobby</title>
+    <title>Draw & Guess Game – Lobby</title>
     <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -12,46 +9,61 @@ session_start();
 <div class="game">
     <h1>🎮 Draw & Guess Lobby</h1>
 
-    <input type="text" id="room" placeholder="Enter Room Code (e.g. 1234)">
+    <!-- Room Code -->
+    <input type="text" id="room" placeholder="Create / Enter Room Code (e.g. 1234)">
     <br><br>
+
+    <!-- Player Name -->
     <input type="text" id="name" placeholder="Enter Your Name">
     <br><br>
 
+    <!-- Join Button -->
     <button onclick="joinRoom()">Join Room</button>
 
-    <p id="status"></p>
+    <!-- Status -->
+    <p id="status" style="margin-top:15px;"></p>
 
+    <!-- Start Game -->
     <button id="startBtn" style="display:none;" onclick="startGame()">
         Start Game
     </button>
 </div>
 
 <script>
-function joinRoom() {
-    let name = document.getElementById("name").value;
-    let room = document.getElementById("room").value;
+let joinedRoom = "";
 
-    if(name === "" || room === ""){
-        alert("Enter name and room code");
+function joinRoom() {
+    const name = document.getElementById("name").value.trim();
+    const room = document.getElementById("room").value.trim();
+
+    if (name === "" || room === "") {
+        alert("Please enter both Name and Room Code");
         return;
     }
 
     fetch("join.php", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: "name=" + name + "&room=" + room
+        body: "name=" + encodeURIComponent(name) + "&room=" + encodeURIComponent(room)
     })
     .then(res => res.json())
     .then(data => {
         document.getElementById("status").innerText = data.msg;
-        if(data.ready){
+        joinedRoom = room;
+
+        /* Show start button only when room is full */
+        if (data.ready) {
             document.getElementById("startBtn").style.display = "inline-block";
         }
     });
 }
 
-function startGame(){
-    window.location = "index.php";
+function startGame() {
+    if (joinedRoom === "") {
+        alert("Join a room first");
+        return;
+    }
+    window.location.href = "index.php?room=" + joinedRoom;
 }
 </script>
 
