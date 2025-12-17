@@ -2,28 +2,94 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Treasure Hunt Multiplayer Pro</title>
+<title>🎯 Treasure Hunt Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h1>🎯 Treasure Hunt Multiplayer Pro 🎯</h1>
+<div class="container">
+    <!-- Lobby Screen -->
+    <div id="lobby" class="screen active">
+        <div class="lobby-card">
+            <h1 class="game-title">
+                <span class="title-icon">🎯</span>
+                Treasure Hunt Pro
+            </h1>
+            <p class="game-subtitle">Multiplayer Strategy Game</p>
+            
+            <div class="input-group">
+                <label for="playerName">Your Name</label>
+                <input type="text" id="playerName" placeholder="Enter your name" maxlength="20">
+            </div>
+            
+            <div class="input-group">
+                <label for="roomKey">Room Key</label>
+                <input type="text" id="roomKey" placeholder="Enter room key" maxlength="20">
+            </div>
+            
+            <button id="joinBtn" class="btn-primary">
+                <span>Join Game</span>
+            </button>
+            
+            <p id="lobbyMsg" class="message"></p>
+            
+            <div class="game-rules">
+                <h3>How to Play</h3>
+                <ul>
+                    <li>🎮 2 players per room</li>
+                    <li>🎯 Setter: Place 3 red boxes & 1 bomb</li>
+                    <li>🔍 Guesser: Find green boxes (+10 pts)</li>
+                    <li>⚠️ Avoid red boxes (-5 pts) & bomb (score reset!)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
 
-<div id="lobby">
-<input type="text" id="playerName" placeholder="Your Name">
-<input type="text" id="roomKey" placeholder="Room Key">
-<button id="joinBtn">Join Room</button>
-<p id="lobbyMsg"></p>
-</div>
+    <!-- Game Screen -->
+    <div id="gameArea" class="screen">
+        <header class="game-header">
+            <div class="header-left">
+                <h2 id="roundInfo" class="round-info">Round 1/3</h2>
+                <div id="roleInfo" class="role-badge">Role: Waiting</div>
+            </div>
+            <div class="header-right">
+                <button id="leaveBtn" class="btn-secondary">Leave Game</button>
+            </div>
+        </header>
 
-<div id="gameArea" style="display:none;">
-<h2 id="roundInfo"></h2>
-<div id="roleInfo"></div>
-<div id="turnInfo"></div>
-<div id="boxesContainer"></div>
-<button id="confirmBtn" style="display:none;">Confirm Boxes</button>
-<h2>Scoreboard</h2>
-<ul id="scoreboard"></ul>
+        <div class="game-content">
+            <div class="game-status">
+                <div id="turnInfo" class="turn-info">Waiting for players...</div>
+                <div id="gameMessage" class="game-message"></div>
+            </div>
+
+            <div class="boxes-wrapper">
+                <div id="boxesContainer" class="boxes-container"></div>
+            </div>
+
+            <div class="action-area">
+                <button id="confirmBtn" class="btn-confirm" style="display:none;">
+                    <span>✓ Confirm Selection</span>
+                </button>
+                <div id="selectionStatus" class="selection-status"></div>
+            </div>
+
+            <div class="scoreboard-section">
+                <h3 class="scoreboard-title">📊 Scoreboard</h3>
+                <div id="scoreboard" class="scoreboard"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOver" class="screen">
+        <div class="game-over-card">
+            <h2 class="game-over-title">🎉 Game Over!</h2>
+            <div id="finalScores" class="final-scores"></div>
+            <button id="playAgainBtn" class="btn-primary">Play Again</button>
+            <button id="newGameBtn" class="btn-secondary">New Game</button>
+        </div>
+    </div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
