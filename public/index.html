@@ -1,0 +1,27 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Real Draw & Guess</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="game">
+  <h2>🎮 Real Draw & Guess</h2>
+
+  <input id="room" placeholder="Room Code">
+  <input id="name" placeholder="Your Name">
+  <button onclick="join()">Join</button>
+
+  <p id="status"></p>
+
+  <canvas id="canvas" width="500" height="300"></canvas>
+  <input id="guess" placeholder="Guess word">
+  <button onclick="sendGuess()">Guess</button>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
