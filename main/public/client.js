@@ -98,42 +98,67 @@ function renderBoxes() {
         const div = document.createElement("div");
         div.classList.add("box");
         
+        // Helper function to create image element
+        const createImage = (type) => {
+            const img = document.createElement("img");
+            img.style.width = "75%";
+            img.style.height = "75%";
+            img.style.objectFit = "contain";
+            img.style.userSelect = "none";
+            
+            if (type === "green") {
+                // Green flag SVG - better design
+                img.src = "data:image/svg+xml,%3Csvg xmlns='greenflag.png' viewBox='0 0 100 100'%3E%3Crect x='10' y='10' width='8' height='80' fill='%23d97706'/%3E%3Cpath d='M18 15 L70 25 L70 45 L18 35 Z' fill='%2310b981'/%3E%3Cpath d='M18 35 L70 45 L70 65 L18 55 Z' fill='%23059669'/%3E%3C/svg%3E";
+                img.alt = "Green Flag";
+            } else if (type === "red") {
+                // Red flag SVG - better design
+                img.src = "data:image/svg+xml,%3Csvg xmlns='redflag.png' viewBox='0 0 100 100'%3E%3Crect x='10' y='10' width='8' height='80' fill='%23d97706'/%3E%3Cpath d='M18 15 L70 25 L70 45 L18 35 Z' fill='%23ef4444'/%3E%3Cpath d='M18 35 L70 45 L70 65 L18 55 Z' fill='%23dc2626'/%3E%3C/svg%3E";
+                img.alt = "Red Flag";
+            } else if (type === "bomb") {
+                // Bomb SVG - better design
+                img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='35' fill='%231f2937' stroke='%23000000' stroke-width='3'/%3E%3Ccircle cx='50' cy='50' r='28' fill='%23000000'/%3E%3Ccircle cx='50' cy='50' r='20' fill='%23ef4444' opacity='0.8'/%3E%3Cpath d='M50 20 L52 30 L48 30 Z' fill='%23f59e0b'/%3E%3Cpath d='M50 80 L52 70 L48 70 Z' fill='%23f59e0b'/%3E%3Cpath d='M20 50 L30 52 L30 48 Z' fill='%23f59e0b'/%3E%3Cpath d='M80 50 L70 52 L70 48 Z' fill='%23f59e0b'/%3E%3Cpath d='M32 32 L38 38 L35 41 L28 34 Z' fill='%23f59e0b'/%3E%3Cpath d='M68 32 L62 38 L65 41 L72 34 Z' fill='%23f59e0b'/%3E%3Cpath d='M32 68 L38 62 L35 59 L28 66 Z' fill='%23f59e0b'/%3E%3Cpath d='M68 68 L62 62 L65 59 L72 66 Z' fill='%23f59e0b'/%3E%3C/svg%3E";
+                img.alt = "Bomb";
+            }
+            return img;
+        };
+        
         if (box.opened) {
             div.classList.add("opened");
             if (box.content === "green") {
                 div.classList.add("green");
-                div.textContent = "✅";
+                div.appendChild(createImage("green"));
             } else if (box.content === "red") {
                 div.classList.add("red");
-                div.textContent = "⚑";
+                div.appendChild(createImage("red"));
             } else if (box.content === "bomb") {
                 div.classList.add("bomb");
-                div.textContent = "💣";
+                div.appendChild(createImage("bomb"));
             }
         } else {
-            // Show setter's selection even if not opened (only visible to setter)
+            // Show setter's selection even if not opened (ONLY visible to setter, NOT guesser)
             if (myId === roomData.setter && box.content && roomData.gameState === "setting") {
                 if (box.content === "red") {
                     div.classList.add("red");
                     div.style.opacity = "0.9";
                     div.style.border = "3px solid #ef4444";
                     div.style.boxShadow = "0 0 15px rgba(239, 68, 68, 0.5)";
-                    div.textContent = "⚑";
+                    div.appendChild(createImage("red"));
                     div.title = "Red Flag (Click to remove)";
                 } else if (box.content === "bomb") {
                     div.classList.add("bomb");
                     div.style.opacity = "0.9";
                     div.style.border = "3px solid #1f2937";
                     div.style.boxShadow = "0 0 15px rgba(31, 41, 55, 0.5)";
-                    div.textContent = "💣";
+                    div.appendChild(createImage("bomb"));
                     div.title = "Bomb (Click to remove)";
                 } else if (box.content === "green") {
                     div.classList.add("green");
                     div.style.opacity = "0.7";
-                    div.textContent = "✅";
+                    div.appendChild(createImage("green"));
                     div.title = "Green (Auto-filled)";
                 }
             } else {
+                // Guesser sees only "?" - setter's selection is hidden
                 div.textContent = "?";
             }
         }
@@ -211,7 +236,7 @@ function updateSelectionStatus() {
 // Confirm Boxes
 confirmBtn.onclick = () => {
     if (selectedRed === 3 && selectedBomb === 1) {
-        socket.emit("confirmBoxes");
+    socket.emit("confirmBoxes");
         confirmBtn.style.display = "none";
         showMessage(gameMessage, "Waiting for guesser to start...", "success");
     }
