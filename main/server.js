@@ -9,26 +9,24 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(path.join(__dirname, "public")));
 
-let rooms = {}; // { roomCode: [{id, name, score, role}, ...] }
+let rooms = {}; // { roomCode: { players: [{id,name,score,role}], timer, round } }
 
 io.on("connection", socket => {
   console.log("User connected:", socket.id);
 
-  // Join room
   socket.on("joinRoom", ({ room, name }) => {
     socket.join(room);
-    if (!rooms[room]) rooms[room] = [];
 
-    if (rooms[room].length < 2) {
-      const role = rooms[room].length === 0 ? "drawer" : "guesser";
-      rooms[room].push({ id: socket.id, name, score: 0, role });
+    if (!rooms[room]) rooms[room] = { players: [], round: 1, timer: null };
+
+    if (rooms[room].players.length < 2) {
+      const role = rooms[room].players.length === 0 ? "drawer" : "guesser";
+      rooms[room].players.push({ id: socket.id, name, score: 0, role });
     }
 
-    io.to(room).emit("playersUpdate", rooms[room]);
+    io.to(room).emit("playersUpdate", rooms[room].players);
 
-    if (rooms[room].length === 2) {
-      io.to(room).emit("gameStart", rooms[room]);
-    }
+    if (rooms[room].players.length === 2) startRound(room);
   });
 
   // Drawing
@@ -36,43 +34,82 @@ io.on("connection", socket => {
     socket.to(data.room).emit("draw", data);
   });
 
-  // Check guess
+  // Guessing
   socket.on("checkGuess", ({ room, guess }) => {
-    if (!rooms[room]) return;
-    
-    const guesser = rooms[room].find(p => p.id === socket.id);
-    const drawer = rooms[room].find(p => p.role === "drawer");
-    if (!guesser || !drawer) return;
+    const roomObj = rooms[room];
+    if (!roomObj) return;
 
-    // Compare guess
+    const drawer = roomObj.players.find(p => p.role === "drawer");
+    const guesser = roomObj.players.find(p => p.id === socket.id);
+
+    if (!drawer || !guesser) return;
+
     if (guess.toLowerCase() === drawer.name.toLowerCase()) {
-      // Assign points
-      guesser.score += 100;
-      drawer.score += 50;
+      // Calculate points based on timer
+      const remainingTime = roomObj.remainingTime || 60;
+      const guesserPoints = 100 + Math.floor(remainingTime / 2); // fast guess bonus
+      const drawerPoints = 50;
 
-      // Notify round ended
+      guesser.score += guesserPoints;
+      drawer.score += drawerPoints;
+
       io.to(room).emit("roundEnded", {
         winner: guesser.name,
         guesserScore: guesser.score,
-        drawerScore: drawer.score
+        drawerScore: drawer.score,
+        remainingTime,
+        guesserPoints,
+        drawerPoints
       });
 
-      // Switch roles
-      [drawer.role, guesser.role] = [guesser.role, drawer.role];
-      io.to(room).emit("playersUpdate", rooms[room]);
+      switchRoles(room);
+      startRound(room);
     }
   });
 
-  // Disconnect
   socket.on("disconnect", () => {
     for (let room in rooms) {
-      rooms[room] = rooms[room].filter(p => p.id !== socket.id);
-      io.to(room).emit("playersUpdate", rooms[room]);
-      if (rooms[room].length === 0) delete rooms[room];
+      rooms[room].players = rooms[room].players.filter(p => p.id !== socket.id);
+      io.to(room).emit("playersUpdate", rooms[room].players);
+      if (rooms[room].players.length === 0) {
+        clearInterval(rooms[room].timer);
+        delete rooms[room];
+      }
     }
     console.log("User disconnected:", socket.id);
   });
 });
+
+// Helper functions
+
+function startRound(room) {
+  const roomObj = rooms[room];
+  if (!roomObj) return;
+
+  roomObj.remainingTime = 60;
+  io.to(room).emit("newRound", { round: roomObj.round, remainingTime: roomObj.remainingTime });
+
+  clearInterval(roomObj.timer);
+  roomObj.timer = setInterval(() => {
+    roomObj.remainingTime--;
+    io.to(room).emit("timerUpdate", roomObj.remainingTime);
+    if (roomObj.remainingTime <= 0) {
+      io.to(room).emit("roundEnded", { winner: null });
+      switchRoles(room);
+      roomObj.round++;
+      startRound(room);
+    }
+  }, 1000);
+}
+
+function switchRoles(room) {
+  const roomObj = rooms[room];
+  if (!roomObj) return;
+  roomObj.players.forEach(p => {
+    p.role = p.role === "drawer" ? "guesser" : "drawer";
+  });
+  io.to(room).emit("playersUpdate", roomObj.players);
+}
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
