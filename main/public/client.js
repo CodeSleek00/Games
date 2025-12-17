@@ -137,27 +137,25 @@ function renderBoxes() {
             if (myId === roomData.setter && box.content && roomData.gameState === "setting") {
                 if (box.content === "red") {
                     div.classList.add("red");
-                    div.style.opacity = "0.9";
-                    div.style.border = "3px solid #ef4444";
-                    div.style.boxShadow = "0 0 15px rgba(239, 68, 68, 0.5)";
                     div.appendChild(createImage("red"));
                     div.title = "Red Flag (Click to remove)";
                 } else if (box.content === "bomb") {
                     div.classList.add("bomb");
-                    div.style.opacity = "0.9";
-                    div.style.border = "3px solid #1f2937";
-                    div.style.boxShadow = "0 0 15px rgba(31, 41, 55, 0.5)";
                     div.appendChild(createImage("bomb"));
                     div.title = "Bomb (Click to remove)";
                 } else if (box.content === "green") {
                     div.classList.add("green");
-                    div.style.opacity = "0.7";
                     div.appendChild(createImage("green"));
                     div.title = "Green (Auto-filled)";
                 }
             } else {
-                // Guesser sees only "?" - setter's selection is hidden
+                // Guesser sees only "?" - setter's selection is completely hidden
+                div.className = "box";
                 div.textContent = "?";
+                div.removeAttribute("title");
+                div.style.opacity = "";
+                div.style.border = "";
+                div.style.boxShadow = "";
             }
         }
 
@@ -334,7 +332,11 @@ function updateUI() {
     // Game Message
     if (myId === roomData.setter) {
         if (selectedRed < 3 || selectedBomb < 1) {
-            showMessage(gameMessage, "Place 3 red boxes and 1 bomb", "");
+            showMessage(
+                gameMessage,
+                "Please select the boxes: place 3 red flags and 1 bomb.",
+                ""
+            );
         } else if (confirmBtn.style.display === "none") {
             showMessage(gameMessage, "Click confirm when ready", "success");
         }
