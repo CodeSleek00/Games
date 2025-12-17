@@ -8,6 +8,7 @@ const lobby = document.getElementById("lobby");
 const gameArea = document.getElementById("gameArea");
 const lobbyMsg = document.getElementById("lobbyMsg");
 const joinBtn = document.getElementById("joinBtn");
+const confirmBtn = document.getElementById("confirmBtn");
 const playerNameInput = document.getElementById("playerName");
 const roomKeyInput = document.getElementById("roomKey");
 
@@ -30,6 +31,10 @@ joinBtn.onclick = ()=>{
     });
 };
 
+// Track selection for setter
+let selectedRed=0;
+let selectedBomb=0;
+
 // Render boxes
 function renderBoxes(){
     boxesContainer.innerHTML="";
@@ -45,18 +50,33 @@ function renderBoxes(){
         } else div.textContent="?";
 
         div.onclick = ()=>{
-            if(myId===roomData.guesser && !box.opened){
+            if(myId===roomData.setter && !box.opened && !box.content){
+                if(selectedRed<3){
+                    box.content="red";
+                    selectedRed++;
+                } else if(selectedBomb<1){
+                    box.content="bomb";
+                    selectedBomb++;
+                } else return;
+                socket.emit("setBox",{index:idx,content:box.content});
+            } else if(myId===roomData.guesser && !box.opened && box.content){
                 socket.emit("guessBox",idx);
-            } else if(myId===roomData.setter && !box.opened){
-                const content = prompt("Set box (red/bomb)").toLowerCase();
-                if(["red","bomb"].includes(content)){
-                    socket.emit("setBox",{index:idx,content:content});
-                } else alert("Only Red or Bomb allowed!");
             }
         };
         boxesContainer.appendChild(div);
     });
+
+    if(myId===roomData.setter && selectedRed===3 && selectedBomb===1){
+        confirmBtn.style.display="inline-block";
+    } else {
+        confirmBtn.style.display="none";
+    }
 }
+
+// Confirm setter boxes
+confirmBtn.onclick = ()=>{
+    socket.emit("confirmBoxes");
+};
 
 // Render scoreboard
 function renderScoreboard(){
@@ -73,7 +93,7 @@ function updateUI(){
     renderBoxes();
     renderScoreboard();
     roundInfo.textContent = `Round: ${roomData.round}/${roomData.maxRounds}`;
-    if(myId===roomData.setter) roleInfo.textContent="Role: Box Setter (Select 3 Red + 1 Bomb)";
+    if(myId===roomData.setter) roleInfo.textContent="Role: Box Setter (Click 3 Red + 1 Bomb)";
     else if(myId===roomData.guesser) roleInfo.textContent="Role: Guesser";
     else roleInfo.textContent="Role: Waiting";
     turnInfo.textContent = `Guesser: ${roomData.guesser?roomData.players[roomData.guesser].name:"-"}`;
@@ -83,4 +103,9 @@ function updateUI(){
 socket.on("roomData",(data)=>{
     roomData = data;
     updateUI();
+});
+
+// Start guessing after confirm
+socket.on("startGuessing",()=>{
+    alert("Setter confirmed! Guesser can start guessing.");
 });

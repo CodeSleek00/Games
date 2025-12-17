@@ -29,7 +29,6 @@ function createRoom(roomKey){
 createRoom("ROOM123");
 
 function nextTurn(room){
-    // Swap setter and guesser after rounds
     const temp = room.setter;
     room.setter = room.guesser;
     room.guesser = temp;
@@ -66,23 +65,30 @@ io.on("connection",(socket)=>{
         callback({success:true});
     });
 
-    // Setter selects Red/Bomb box
+    // Setter selects boxes (red/bomb)
     socket.on("setBox",(data)=>{
         const room = rooms[joinedRoom];
         if(socket.id!==room.setter) return;
         if(room.boxes[data.index]) room.boxes[data.index].content = data.content;
 
-        // Count red and bomb
+        // Check if selection complete
         const redCount = room.boxes.filter(b=>b.content==="red").length;
         const bombCount = room.boxes.filter(b=>b.content==="bomb").length;
         if(redCount===3 && bombCount===1){
-            // Fill remaining boxes as green automatically
+            // Fill remaining with green
             room.boxes.forEach(b=>{
                 if(!b.content) b.content="green";
             });
         }
 
         io.to(joinedRoom).emit("roomData",room);
+    });
+
+    // Setter confirms selection
+    socket.on("confirmBoxes",()=>{
+        const room = rooms[joinedRoom];
+        if(socket.id!==room.setter) return;
+        io.to(joinedRoom).emit("startGuessing");
     });
 
     // Guesser guesses

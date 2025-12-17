@@ -34,3 +34,12 @@ body{
     #boxesContainer{grid-template-columns:repeat(3,80px);gap:10px;}
     .box{width:80px;height:80px;font-size:16px;}
 }
+#confirmBtn{
+    padding:10px 20px;
+    margin-top:15px;
+    font-size:16px;
+    cursor:pointer;
+    background:#0f0;
+    border:none;
+    border-radius:5px;
+}
