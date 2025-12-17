@@ -71,7 +71,7 @@ io.on("connection", (socket) => {
     console.log("Connected:", socket.id);
     let joinedRoom = null;
 
-    socket.on("joinRoom", (roomKey, playerName, callback) => {
+    socket.on("joinRoom", (roomKey, playerName, playerDare, callback) => {
         if (!rooms[roomKey]) {
             callback({ success: false, message: "Invalid Room Key" });
             return;
@@ -97,6 +97,7 @@ io.on("connection", (socket) => {
         room.players[socket.id] = {
             id: socket.id,
             name: playerName,
+            dare: (playerDare || "No dare set"),
             score: 0,
             roundsPlayed: 0
         };

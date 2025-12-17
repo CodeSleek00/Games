@@ -19,6 +19,7 @@ const playAgainBtn = document.getElementById("playAgainBtn");
 const newGameBtn = document.getElementById("newGameBtn");
 const playerNameInput = document.getElementById("playerName");
 const roomKeyInput = document.getElementById("roomKey");
+const playerDareInput = document.getElementById("playerDare");
 const selectionStatus = document.getElementById("selectionStatus");
 const finalScores = document.getElementById("finalScores");
 
@@ -43,6 +44,7 @@ function showScreen(screenName) {
 joinBtn.onclick = () => {
     const name = playerNameInput.value.trim();
     const roomKey = roomKeyInput.value.trim();
+    const playerDare = (playerDareInput?.value || "").trim();
     
     if (!name || !roomKey) {
         showMessage(lobbyMsg, "Please enter both name and room key", "error");
@@ -55,7 +57,7 @@ joinBtn.onclick = () => {
     }
     
     myName = name;
-    socket.emit("joinRoom", roomKey, name, (res) => {
+    socket.emit("joinRoom", roomKey, name, playerDare, (res) => {
         if (res.success) {
             showScreen("gameArea");
             myId = socket.id;
@@ -442,11 +444,19 @@ socket.on("gameOver", (data) => {
     
     const players = Object.values(data.players).sort((a, b) => b.score - a.score);
     const winner = players[0];
+    const loser = players[1];
+    const winnerDare = winner?.dare || "No dare set";
     
     finalScores.innerHTML = `
         <div class="winner-badge">
             🏆 Winner: ${winner.name} with ${winner.score} points!
         </div>
+        ${loser ? `
+        <div class="dare-summary">
+            <p><strong>Loser:</strong> ${loser.name}</p>
+            <p><strong>Dare from ${winner.name}:</strong> ${winnerDare}</p>
+            <p class="dare-note">Both of you should now make sure the loser performs this dare (video call / in person) 😉</p>
+        </div>` : ""}
         <div class="scoreboard">
             ${players.map((p, idx) => `
                 <div class="scoreboard-item ${p.id === myId ? 'current-player' : ''}">
