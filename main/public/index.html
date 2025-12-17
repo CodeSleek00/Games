@@ -2,16 +2,27 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Treasure Hunt Game</title>
+<title>Treasure Hunt Multiplayer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <h1>🎯 Treasure Hunt Multiplayer 🎯</h1>
-<div id="turnInfo"></div>
-<div id="boxesContainer"></div>
-<h2>Scoreboard</h2>
-<ul id="scoreboard"></ul>
+
+<div id="lobby">
+    <input type="text" id="playerName" placeholder="Enter your name">
+    <input type="text" id="roomKey" placeholder="Enter Room Key">
+    <button id="joinBtn">Join Room</button>
+    <p id="lobbyMsg"></p>
+</div>
+
+<div id="gameArea" style="display:none;">
+    <div id="turnInfo"></div>
+    <div id="boxesContainer"></div>
+    <h2>Scoreboard</h2>
+    <ul id="scoreboard"></ul>
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script src="client.js"></script>
 </body>
